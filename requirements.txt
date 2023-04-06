@@ -1,0 +1,11 @@
+aiogram
+Cmake
+dlib
+face-recognition
+nest_asyncio
+obs-websocket-py
+keyboard
+amcp_pylib
+numpy
+opencv-python
+fastapi
