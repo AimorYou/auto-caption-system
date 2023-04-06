@@ -1,6 +1,5 @@
 aiogram
 Cmake
-dlib
 face-recognition
 nest_asyncio
 obs-websocket-py
