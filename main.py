@@ -12,7 +12,7 @@ from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher import FSMContext
 
 from markups import main_menu, inline_menu, inline_edit_menu
-from config import API_TOKEN, HELP
+from config import API_TOKEN, HELP, users, bot_password
 from functions import load_photo_with_name, parse_filename, show_people
 import recognizer
 
@@ -31,6 +31,8 @@ class ProfileStatesGroup(StatesGroup):
     edit_idx = State()
     edit_name = State()
 
+    password = State()
+
 
 nest_asyncio.apply()
 
@@ -38,6 +40,28 @@ rec = recognizer.Main()
 storage = MemoryStorage()
 bot = Bot(API_TOKEN)
 dp = Dispatcher(bot=bot, storage=storage)
+
+
+@dp.message_handler(lambda mes: mes.chat.id not in users, commands=['start'])
+async def get_access(message: types.Message):
+    await message.answer('Введите пароль для доступа к боту!')
+    await ProfileStatesGroup.password.set()
+    await message.delete()
+
+
+@dp.message_handler(state=ProfileStatesGroup.password)
+async def check_password(message: types.Message, state: FSMContext):
+    if message.text == bot_password:
+        users.append(message.chat.id)
+        await message.answer('Ты зареган!\n' + HELP, reply_markup=main_menu, parse_mode='HTML')
+    else:
+        await message.answer('В доступе отказано!')
+    await state.finish()
+
+
+@dp.message_handler(lambda mes: mes.chat.id not in users)
+async def have_access(message: types.Message):
+    await bot.send_message(message.chat.id, 'Создатель не разрешает мне общаться с незнакомыми людьми!')
 
 
 @dp.message_handler(commands=['start'])
