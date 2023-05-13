@@ -8,3 +8,5 @@ amcp_pylib
 numpy
 opencv-python
 fastapi
+uvicorn
+
