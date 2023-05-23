@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from main import rec
 from fastapi.openapi.utils import get_openapi
+import uvicorn
 
 app = FastAPI()
+
 
 @app.post("/send_ndi")
 async def root():
@@ -24,3 +26,8 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
+print(type(app.openapi()))
+
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=4446)
+    # uvicorn app:app --port 4446 --reload
