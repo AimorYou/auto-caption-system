@@ -182,10 +182,7 @@ class Recognizer:
         self.client = Client()
         self.client.connect()
         
-        self.ws = obsws(host, port, password)
-        self.ws.connect()
-
-        self.set_star_title()
+        self.ws = None
 
     def __read_images(self):
         faces_dir = Path("people")
@@ -241,6 +238,12 @@ class Recognizer:
     def set_star_title(self):
         self.ws.call(requests.SetInputSettings(inputName="detected_name",
                                                inputSettings={"text": f"Тут будет человек!"}))
+
+    def connect_obs(self):
+        self.ws = obsws(host, port, password)
+        self.ws.connect()
+
+        self.set_star_title()
     
     def send_ndi(self):
         with open('text.txt', 'r') as fin:

@@ -2,7 +2,6 @@ import nest_asyncio
 import re
 import glob
 import face_recognition
-import shutil
 import os
 
 from aiogram import types, executor, Bot, Dispatcher
@@ -15,6 +14,7 @@ from markups import main_menu, inline_menu, inline_edit_menu
 from config import API_TOKEN, HELP, users, bot_password
 from functions import load_photo_with_name, parse_filename, show_people
 import recognizer
+import config
 
 
 class ProfileStatesGroup(StatesGroup):
@@ -33,6 +33,10 @@ class ProfileStatesGroup(StatesGroup):
 
     password = State()
 
+    set_ip = State()
+    set_port = State()
+    set_password = State()
+
 
 nest_asyncio.apply()
 
@@ -40,6 +44,11 @@ rec = recognizer.Main()
 storage = MemoryStorage()
 bot = Bot(API_TOKEN)
 dp = Dispatcher(bot=bot, storage=storage)
+
+ipv4_pattern = '''^(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.(
+25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.(
+25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)\.(
+25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)$'''
 
 
 @dp.message_handler(lambda mes: mes.chat.id not in users, commands=['start'])
@@ -295,21 +304,59 @@ async def edit_person_name(message: types.Message, state: FSMContext):
 @dp.message_handler(Text(equals="Закончить распознавание 🚫"), state='*')
 async def cmd_end_rec(message: types.Message, state: FSMContext):
     try:
-        # rec.rec.recognized_people.clear()
         rec.rec.set_star_title()
         await rec.end()
         await message.reply("Распознавание закончилось")
-        await state.finish()
     except Exception as e:
         await message.answer("❗ Что-то пошло не так! " + str(e))
+    finally:
+        await state.finish()
 
 
 # --------------------------------------------Закончить распознавание---------------------------------------------------
+# --------------------------------------------OBS config---------------------------------------------------
+@dp.message_handler(Text(equals="Настроить OBS ⚙️"))
+async def cmd_obs_config(message: types.Message):
+    await message.answer("Введите ip OBS сервера! (Пример: 192.168.12.197)", reply_markup=inline_menu)
+    await ProfileStatesGroup.set_ip.set()
+
+
+@dp.message_handler(state=ProfileStatesGroup.set_ip)
+async def set_ip_obs(message: types.Message, state: FSMContext):
+    if re.fullmatch(ipv4_pattern, message.text):
+        config.host = message.text
+        await message.answer("Введите порт OBS сервера от 1 до 65535! (Пример: 4445)", reply_markup=inline_menu)
+        await ProfileStatesGroup.next()
+    else:
+        await message.answer("⚠️ Неправильный формат ip! Введите ip OBS сервера! (Пример: 192.168.12.197)",
+                             reply_markup=inline_menu)
+
+
+@dp.message_handler(state=ProfileStatesGroup.set_port)
+async def set_port_obs(message: types.Message, state: FSMContext):
+    if re.fullmatch("[0-9]+", message.text) and 1 <= int(message.text) <= 65535:
+        config.port = int(message.text)
+        await message.answer("Введите пароль к OBS серверу!", reply_markup=inline_menu)
+        await ProfileStatesGroup.next()
+    else:
+        await message.answer("⚠️ Неправильный формат порта! Введите порт OBS сервера от 1 до 65535! (Пример: 4445)",
+                             reply_markup=inline_menu)
+
+
+@dp.message_handler(state=ProfileStatesGroup.set_password)
+async def set_password_obs(message: types.Message, state: FSMContext):
+        config.password = message.text
+        await message.answer("OBS подключение настроено!",
+                             reply_markup=main_menu)
+        await state.finish()
+# --------------------------------------------OBS config----------------------------------------------------------------
+
 
 # --------------------------------------------Начать распознавание------------------------------------------------------
 @dp.message_handler(Text(equals="Начать распознавание 🔍"))
 async def cmd_start_rec(message: types.Message):
     try:
+        rec.rec.connect_obs()
         rec.rec.set_star_title()
         await message.answer("Введите uri вашей камеры (Пример: rtsp://192.168.1.11:554/live)",
                              reply_markup=inline_menu)
